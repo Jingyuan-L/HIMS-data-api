@@ -76,8 +76,8 @@ def show_expense():
                   "and hospital_id = :3"
     db = cx_Oracle.connect('admin/12345678@oracle-hims-warehouse.cpfsluvxtsqc.us-east-2.rds.amazonaws.com:1521/ORCL')
     cur = db.cursor()
-    start = request.args['query_year']
-    end = str(int(request.args['query_year']) + 1)
+    end = request.args['query_year']
+    start = str(int(request.args['query_year']) - 1)
     id = request.args['hospital_id']
     cur.execute(sql_expense, (start, end, id))
 
@@ -99,13 +99,15 @@ def show_flow():
                "and hospital_id = :3"
     db = cx_Oracle.connect('admin/12345678@oracle-hims-warehouse.cpfsluvxtsqc.us-east-2.rds.amazonaws.com:1521/ORCL')
     cur = db.cursor()
-    start = request.args['query_year']
-    end = str(int(request.args['query_year']) + 1)
+    end = request.args['query_year']
+    start = str(int(request.args['query_year']) - 1)
     id = request.args['hospital_id']
+    print(start, end, id)
     cur.execute(sql_flow, (start, end, id))
 
     items = [0] * 12
     for d, t in cur.fetchall():
+        print(d, t)
         items[int(d.month) - 1] += int(t)
 
     print(items)
@@ -117,23 +119,17 @@ def show_flow():
 
 @app.route('/occupancy')
 def show_occupancy():
-    sql_occupancy = "SELECT occu_date, occupied_rm_num, total_rm FROM occupancy " \
-                    "WHERE occu_date between to_date(:1,'yyyy-mm') and to_date(:2,'yyyy-mm') " \
-                    "and hospital_id = :3"
+    sql_occupancy = "SELECT SUM(OCCUPIED), COUNT(ROOM_ID) FROM ROOM GROUP BY HOSPITAL"
     db = cx_Oracle.connect('admin/12345678@oracle-hims-warehouse.cpfsluvxtsqc.us-east-2.rds.amazonaws.com:1521/ORCL')
     cur = db.cursor()
-    year = request.args['query_year']
-    month = int(request.args['query_month'])
-    start = year + "-" + str(month)
-    end = year + "-" + str(month + 1)
-    id = request.args['hospital_id']
-    cur.execute(sql_occupancy, (start, end, id))
 
-    occupiedData = [0] * 30
-    totalData = [0] * 30
-    for d, o, t in cur.fetchall():
-        occupiedData[d.day - 1] += o
-        totalData[d.day - 1] = t
+    cur.execute(sql_occupancy)
+
+    occupiedData = []
+    totalData = []
+    for o, t in cur.fetchall():
+        occupiedData.append(o)
+        totalData.append(t)
 
     print(occupiedData, totalData)
 
